@@ -26,7 +26,6 @@ from handlers import (
     gamification,      # 29-32. Reytinglar, XP Tizimi, Darajalar va Achievementlar
     daily_challenge,   # 33-35. Daily Challenge, Study Streak va Profil paneli
     referral,          # 36. Referral tizimi
-    premium,           # 37. Premium obuna integratsiyasi
     admin_panel,       # 38, 40. Admin Panel (Broadcast, Statistika, Analytics)
 )
 
