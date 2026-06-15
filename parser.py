@@ -1,4 +1,41 @@
 import re
+
+def parse_raw_text_to_questions(text: str) -> list:
+    """
+    Oddiy matndan savollar, variantlar qismini regex orqali ajratadi.
+    Pattern: 1. Savol... A) ... B) ... formatidagi standart testlar uchun.
+    """
+    # Savollarni raqamlar bo'yicha bo'lish (1., 2. yoki 1-)
+    question_blocks = re.split(r'\n(?=\d+[\.\-\)])', text)
+    parsed_questions = []
+
+    for block in question_blocks:
+        if not block.strip():
+            continue
+            
+        # Savol matnini topish
+        lines = block.strip().split('\n')
+        q_text = lines[0]
+        
+        # Variantlarni bitta satrga yig'ish (agar ular har xil qatorda bo'lsa)
+        options_text = " ".join(lines[1:])
+        
+        # Variantlarni ajratish (A), B), C), D) yoki A., B., C.)
+        options = re.findall(r'([A-D][\)\.])\s*([^A-D\)\.]+)', options_text)
+        
+        options_dict = {}
+        for opt_letter, opt_val in options:
+            clean_letter = opt_letter.replace(')', '').replace('.', '').strip()
+            options_dict[clean_letter] = opt_val.strip()
+            
+        if q_text and options_dict:
+            parsed_questions.append({
+                "question": q_text,
+                "options": options_dict
+            })
+            
+    return parsed_questions
+import re
 import json
 import httpx
 from config import OPENROUTER_API_KEY
