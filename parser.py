@@ -1,70 +1,54 @@
 import re
-
-def parse_raw_text_to_questions(text: str) -> list:
-    """
-    Oddiy matndan savollar, variantlar qismini regex orqali ajratadi.
-    Pattern: 1. Savol... A) ... B) ... formatidagi standart testlar uchun.
-    """
-    # Savollarni raqamlar bo'yicha bo'lish (1., 2. yoki 1-)
-    question_blocks = re.split(r'\n(?=\d+[\.\-\)])', text)
-    parsed_questions = []
-
-    for block in question_blocks:
-        if not block.strip():
-            continue
-            
-        # Savol matnini topish
-        lines = block.strip().split('\n')
-        q_text = lines[0]
-        
-        # Variantlarni bitta satrga yig'ish (agar ular har xil qatorda bo'lsa)
-        options_text = " ".join(lines[1:])
-        
-        # Variantlarni ajratish (A), B), C), D) yoki A., B., C.)
-        options = re.findall(r'([A-D][\)\.])\s*([^A-D\)\.]+)', options_text)
-        
-        options_dict = {}
-        for opt_letter, opt_val in options:
-            clean_letter = opt_letter.replace(')', '').replace('.', '').strip()
-            options_dict[clean_letter] = opt_val.strip()
-            
-        if q_text and options_dict:
-            parsed_questions.append({
-                "question": q_text,
-                "options": options_dict
-            })
-            
-    return parsed_questions
-import re
 import json
 import httpx
 from config import OPENROUTER_API_KEY
 
 def parse_raw_text_to_questions(text: str) -> list:
-    """Standart formatdagi testlarni tezkor regex bilan ajratish (Tezlik uchun cache vazifasini o'taydi)"""
-    question_blocks = re.split(r'\n(?=\d+[\.\-\)])', text)
+    """
+    Standart formatdagi testlarni tezkor regex bilan ajratish.
+    Har xil satrdagi savollar va variant ichidagi nuqtalarni ham to'g'ri ajratadi.
+    """
+    # Savollarni raqamlar bo'yicha bo'lish (1., 2-, 3) variantlari uchun)
+    question_blocks = re.split(r'\n(?=\d+[\.\-\)])', text.strip())
     parsed_questions = []
 
     for block in question_blocks:
         if not block.strip():
             continue
-        lines = block.strip().split('\n')
-        q_text = lines[0]
-        options_text = " ".join(lines[1:])
-        options = re.findall(r'([A-D][\)\.])\s*([^A-D\)\.]+)', options_text)
+
+        # Savol matni va variantlar qismini ajratish
+        # Variantlar boshlanish joyini qidiramiz (A) yoki A. yoki A-)
+        match_options_start = re.search(r'(^|\s)([A-E][\)\.\-])\s', block)
+        
+        if match_options_start:
+            start_idx = match_options_start.start()
+            q_text = block[:start_idx].strip()
+            options_text = block[start_idx:].strip()
+        else:
+            # Agar variantlar topilmasa, butun blokni savol deb olamiz
+            q_text = block.strip()
+            options_text = ""
+
+        # Variantlarni harflar bo'yicha to'g'ri kesib olish (Lookahead yordamida)
+        # Bu regex variant ichidagi nuqtalarga chalinmaydi
+        options = re.findall(r'([A-E])[\)\.\-]\s*(.*?)(?=\s*[A-E][\)\.\-]\s*|$)', options_text, re.DOTALL)
         
         options_dict = {}
         for opt_letter, opt_val in options:
-            clean_letter = opt_letter.replace(')', '').replace('.', '').strip()
-            options_dict[clean_letter] = opt_val.strip()
+            options_dict[opt_letter.upper()] = opt_val.strip()
             
-        if q_text and options_dict:
+        if q_text:
+            # Savol boshidagi raqamni tozalash (Masalan: "1. Tizim..." -> "Tizim...")
+            clean_q_text = re.sub(r'^\d+[\.\-\)]\s*', '', q_text).strip()
+            
             parsed_questions.append({
-                "question": q_text,
+                "question": clean_q_text,
                 "options": options_dict,
                 "correct": None  # Kalit keyinroq aniqlanadi
             })
+            
     return parsed_questions
+
 
 async def ask_ai_to_parse_and_solve(text: str) -> list:
     """Regex o'ta olmagan murakkab matnlarni parse qilish va to'g'ri javoblarni AI orqali topish"""
@@ -73,7 +57,8 @@ async def ask_ai_to_parse_and_solve(text: str) -> list:
 
     prompt = f"""
     Quyidagi matn ichidan test savollari, variantlari va to'g'ri javoblarini aniqlab, ularni FAQAT va FAQAT JSON formatida qaytar.
-    Hech qanday qo'shimcha matn yozma.
+    Hech qanday qo'shmcha tushuntirish yoki markdown formatsiz javob ber.
+    
     Format namunasi:
     [
       {{"question": "Python nima?", "options": {{"A": "Dasturlash tili", "B": "Ilon turi"}}, "correct": "A", "confidence": 0.95}}
@@ -89,7 +74,7 @@ async def ask_ai_to_parse_and_solve(text: str) -> list:
     }
     
     data = {
-        "model": "google/gemini-2.5-flash", # Tezkor va arzon model
+        "model": "google/gemini-2.5-flash",
         "messages": [{"role": "user", "content": prompt}]
     }
 
@@ -98,20 +83,20 @@ async def ask_ai_to_parse_and_solve(text: str) -> list:
             response = await client.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=data, timeout=30.0)
             res_json = response.json()
             content = res_json['choices'][0]['message']['content']
-            # Ba'zan modellar markdown ```json ``` ichida qaytaradi, uni tozalaymiz
+            
+            # Markdown belgilari bo'lsa tozalash
             clean_content = re.sub(r'```json|```', '', content).strip()
             return json.loads(clean_content)
         except Exception as e:
             print(f"AI Parser xatoligi: {e}")
             return []
-# parser.py faylining oxiriga qo'shing:
+
 
 def parse_manual_keys(text: str) -> dict:
     """
     Foydalanuvchi yuborgan plain text kalitlarni dict formatiga o'tkazadi.
-    Namuna: "1-A\n2-C\n3-D" yoki "1.B 2.A" -> {1: "A", 2: "C", 3: "D"}
+    Namuna: "1-A\\n2-C" -> {{1: "A", 2: "C"}}
     """
-    # Raqam va harf juftliklarini topish (Masalan: 1-A, 2.B, 3 C, 4) D)
     matches = re.findall(r'(\d+)\s*[\.\-\)\s]*\s*([A-E])', text, re.IGNORECASE)
     
     keys_dict = {}
@@ -119,4 +104,4 @@ def parse_manual_keys(text: str) -> dict:
         keys_dict[int(num)] = letter.upper().strip()
         
     return keys_dict
-  
+    
