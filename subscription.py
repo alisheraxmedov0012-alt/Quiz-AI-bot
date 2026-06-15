@@ -1,7 +1,7 @@
 from aiogram import BaseMiddleware
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 
-REQUIRED_CHANNELS = ["-100123456789", "-100987654321"] # Kanallar ID ro'yxati
+REQUIRED_CHANNELS = ["-1003372913142", "-1003877501774"] # Kanallar ID ro'yxati
 
 class SubCheckMiddleware(BaseMiddleware):
     async def __call__(self, handler, event: Message, data):
