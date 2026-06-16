@@ -127,7 +127,7 @@ async def generate_referral_link(message: types.Message):
 # ==========================================
 # 10. ADMIN PANEL LOGIKASI
 # ==========================================
-ADMIN_ID = 6271963286  # O'zingizning Telegram ID'ingiz
+ADMIN_ID = 8344095954  # O'zingizning Telegram ID'ingiz
 
 @admin_panel_router.message(Command("admin"))
 async def open_admin_panel(message: types.Message):
@@ -135,7 +135,38 @@ async def open_admin_panel(message: types.Message):
         await message.answer("⚠️ Kechirasiz, ushbu buyruq faqat loyiha administratori uchun ochiq!")
         return
     await message.answer("👑 **Quiz AI — Administrator Boshqaruv Paneli**\n\n/broadcast — Xabar yuborish")
+    
+# ==========================================
+# OBUNANI QAYTA TEKSHIRISH TUGMASI LOGIKASI
+# ==========================================
+# F.data o'rniga xavfsiz lambda funksiyasidan foydalanamiz, shunda import shart bo'lmaydi:
+@start_router.callback_query(lambda call: call.data == "check_sub_again")
+async def check_subscription_callback(call): # types. olib tashlandi
+    user_id = call.from_user.id
+    bot = call.message.bot
+    channels = ["-1003372913142", "-1003877501774"]
+    
+    all_subscribed = True
+    for channel in channels:
+        try:
+            member = await bot.get_chat_member(chat_id=channel, user_id=user_id)
+            if member.status in ["left", "kicked"]:
+                all_subscribed = False
+                break
+        except Exception:
+            all_subscribed = False
+            break
 
+    if all_subscribed:
+        await call.answer("🎉 Tabriklaymiz, barcha kanallarga a'zo bo'ldingiz!", show_alert=True)
+        try:
+            await call.message.delete()
+        except Exception:
+            pass
+        await call.message.answer("🚀 Obuna tasdiqlandi! Botni qayta ishga tushirish uchun /start buyrug'ini bosing.")
+    else:
+        await call.answer("❌ Siz hali barcha kanallarga obuna bo'lmagansiz!", show_alert=True)
+        
 # --- GLOBAL ROUTERLAR RO'YXATI (main.py ko'radigan qism) ---
 all_routers = [
     material_handler_router,
