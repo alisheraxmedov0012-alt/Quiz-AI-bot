@@ -141,7 +141,7 @@ async def open_admin_panel(message: types.Message):
 # ==========================================
 # F.data o'rniga xavfsiz lambda funksiyasidan foydalanamiz, shunda import shart bo'lmaydi:
 @start_router.callback_query(lambda call: call.data == "check_sub_again")
-async def check_subscription_callback(call): # types. olib tashlandi
+async def check_subscription_callback(call):
     user_id = call.from_user.id
     bot = call.message.bot
     channels = ["-1003372913142", "-1003877501774"]
