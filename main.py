@@ -13,8 +13,12 @@ from database import init_db
 from handlers import all_routers
 
 # Middleware (Nazorat tizimlari)
-from middlewares.anti_spam import AntiSpamMiddleware # 39. Anti-Spam (Flood/Rate limit)
-from middlewares.subscription import SubCheckMiddleware # 1. Majburiy obuna tekshiruvi
+from middlewares.anti_spam import AntiSpamMiddleware
+# Agar ichma-ich papkaga tushgan bo'lsa, nuqta qo'shib to'g'ri yo'l ko'rsatamiz:
+try:
+    from middlewares.subscription import SubCheckMiddleware
+except ModuleNotFoundError:
+    from middlewares.middlewares.subscription import SubCheckMiddleware
 
 async def on_startup(bot: Bot):
     """Bot ishga tushganda adminlarni ogohlantirish va bazani sozlash"""
