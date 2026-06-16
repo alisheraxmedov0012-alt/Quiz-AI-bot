@@ -19,7 +19,7 @@ class SubCheckMiddleware(BaseMiddleware):
                     raise Exception()
             except Exception:
                 keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="1-Kanal 📢", url="https://t.me/kvartiralarborbot")],
+                    [InlineKeyboardButton(text="1-Kanal 📢", url="https://t.me/Samarqandkvartiralarelonlari")],
                     [InlineKeyboardButton(text="2-Kanal 📢", url="https://t.me/Toshkent_kvartira_ijara_elonlari")],
                     [InlineKeyboardButton(text="✅ Obunani tekshirish", callback_data="check_sub_again")]
                 ])
